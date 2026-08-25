@@ -17,3 +17,4 @@ docker/vuejs/dist/
 .project
 
 .temp
+.DS_Store
