@@ -110,8 +110,8 @@ static void wifi_retry_cb(void *arg) {
 }
 
 #define PASSKEY_LEN 18
-char my_passkey[PASSKEY_LEN + 1];
-char my_subdomain[32];
+char my_passkey[PASSKEY_LEN + 1] = "test-passkey-01";
+char my_subdomain[32] = "test01";
 
 enum MDB_COMMAND_FLOW {
 	RESET       = 0x00,
@@ -439,7 +439,7 @@ void mdb_cashless_task(void *pvParameters) {
                 char topic[64], msg[64], line[160];
                 snprintf(msg, sizeof(msg), "%u,%u:%lld", item_price, item_number, (long long) time(NULL));
                 rpc_sign_text(msg, line, sizeof(line));
-                snprintf(topic, sizeof(topic), "domain.vmflow.xyz/%s/vend_fail", my_subdomain);
+                snprintf(topic, sizeof(topic), "domain.otomat.local/%s/vend_fail", my_subdomain);
                 esp_mqtt_client_enqueue(mqtt_client, topic, line, 0, 1, 0, 1);
 
 				break;
@@ -468,7 +468,7 @@ void mdb_cashless_task(void *pvParameters) {
 				snprintf(msg, sizeof(msg), "%lu:%u:%lld", (unsigned long) price_wire, item_number, (long long) time(NULL));
 				rpc_sign_text(msg, line, sizeof(line));
 
-				snprintf(topic, sizeof(topic), "domain.vmflow.xyz/%s/sale", my_subdomain);
+				snprintf(topic, sizeof(topic), "domain.otomat.local/%s/sale", my_subdomain);
 				esp_mqtt_client_enqueue(mqtt_client, topic, line, 0, 1, 0, 1);
 
 				ESP_LOGI( TAG, "CASH_SALE");
@@ -545,7 +545,7 @@ void mdb_cashless_task(void *pvParameters) {
 /*
  * Agent-facing interfaces (MQTT, every message signed with the per-device passkey).
  *
- * Inbound RPC — topic <sub>.vmflow.xyz/rpc, payload "<cmd>:<params>:<ts>:<hmac_hex>".
+ * Inbound RPC — topic <sub>.otomat.local/rpc, payload "<cmd>:<params>:<ts>:<hmac_hex>".
  *   hmac = HMAC-SHA256(passkey, everything-before-the-last-colon) in lowercase hex;
  *   <ts> is Unix seconds, accepted only within RPC_FRESHNESS_SEC. <params> is fixed-width
  *   (never empty): commands without an argument send "-" as a sentinel. Commands:
@@ -648,7 +648,7 @@ void ble_pax_event_handler(uint16_t devices_count){
     snprintf(msg, sizeof(msg), "%u:%lld", devices_count, (long long) time(NULL));
     rpc_sign_text(msg, line, sizeof(line));
 
-    snprintf(topic, sizeof(topic), "domain.vmflow.xyz/%s/paxcounter", my_subdomain);
+    snprintf(topic, sizeof(topic), "domain.otomat.local/%s/paxcounter", my_subdomain);
     esp_mqtt_client_enqueue(mqtt_client, topic, line, 0, 1, 0, 1);
 }
 
@@ -668,7 +668,7 @@ void ble_event_handler(char *ble_payload) {
 			nvs_commit(handle);
 
 			char myhost[64];
-			snprintf(myhost, sizeof(myhost), "%s.vmflow.xyz", my_subdomain);
+			snprintf(myhost, sizeof(myhost), "%s.otomat.local", my_subdomain);
 
 			ble_set_device_name(myhost);
 
@@ -789,7 +789,7 @@ static void rpc_publish_info(void) {
 		(long long) last_vend_success_time,
 		s_ip_wifi, s_ip_ppp);
 
-	snprintf(topic, sizeof(topic), "domain.vmflow.xyz/%s/rpc/info", my_subdomain);
+	snprintf(topic, sizeof(topic), "domain.otomat.local/%s/rpc/info", my_subdomain);
 	esp_mqtt_client_enqueue(mqtt_client, topic, json, n, 1, 0, 1);
 }
 
@@ -801,11 +801,11 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 	case MQTT_EVENT_CONNECTED:
 
     	char topic[64], buf[32];
-    	snprintf(topic, sizeof(topic), "%s.vmflow.xyz/#", my_subdomain);
+    	snprintf(topic, sizeof(topic), "%s.otomat.local/#", my_subdomain);
 
     	esp_mqtt_client_subscribe(mqtt_client, topic, 0);
 
-    	snprintf(topic, sizeof(topic), "domain.vmflow.xyz/%s/status", my_subdomain);
+    	snprintf(topic, sizeof(topic), "domain.otomat.local/%s/status", my_subdomain);
     	snprintf(buf, sizeof(buf), "online,%d", (int)esp_reset_reason());
     	esp_mqtt_client_enqueue(mqtt_client, topic, buf, 0, 1, 1, 1);
 
@@ -820,7 +820,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 		break;
 	case MQTT_EVENT_SUBSCRIBED: {
 		char sub_topic[64];
-		snprintf(sub_topic, sizeof(sub_topic), "%s.vmflow.xyz/#", my_subdomain);
+		snprintf(sub_topic, sizeof(sub_topic), "%s.otomat.local/#", my_subdomain);
 		ESP_LOGI(TAG, "mqtt subscribed: %s", sub_topic);
 		break;
 	}
@@ -866,7 +866,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 			bool has_args = (args[0] != '\0' && strcmp(args, "-") != 0);
 
             char topic_confirm[64];
-            snprintf(topic_confirm, sizeof(topic_confirm), "domain.vmflow.xyz/%s/rpc/confirm", my_subdomain);
+            snprintf(topic_confirm, sizeof(topic_confirm), "domain.otomat.local/%s/rpc/confirm", my_subdomain);
 
 			if (strcmp(cmd, "dex") == 0) {
 				request_telemetry_data(NULL);
@@ -890,7 +890,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 				ESP_LOGI(TAG, "RPC out-of-sequence queued");
 			} else if (strcmp(cmd, "echo") == 0) {
 				char topic[64], buf[24];
-				snprintf(topic, sizeof(topic), "domain.vmflow.xyz/%s/rpc/echo", my_subdomain);
+				snprintf(topic, sizeof(topic), "domain.otomat.local/%s/rpc/echo", my_subdomain);
 				snprintf(buf, sizeof(buf), "%u", ts);
 				esp_mqtt_client_enqueue(mqtt_client, topic, buf, 0, 0, 0, 1);
 				ESP_LOGI(TAG, "RPC echo");
@@ -1034,10 +1034,10 @@ static void sim7080g_task(void *pvParameters) {
 
     //-------------------------- MQTT --------------------------//
     char lwt_topic[64];
-    snprintf(lwt_topic, sizeof(lwt_topic), "domain.vmflow.xyz/%s/status", my_subdomain);
+    snprintf(lwt_topic, sizeof(lwt_topic), "domain.otomat.local/%s/status", my_subdomain);
 
     const esp_mqtt_client_config_t mqtt_cfg = {
-        .broker.address.uri = "mqtt://mqtt.vmflow.xyz",
+        .broker.address.uri = "mqtt://127.0.0.1",
         .session.last_will.topic = lwt_topic,
         .session.last_will.msg = "offline",
         .session.last_will.qos = 1,
@@ -1159,7 +1159,7 @@ void app_main(void) {
 	//------------------------ BLUETOOTH -----------------------//
 	//----------------------------------------------------------//
 	char myhost[64];
-	strcpy(myhost, "0.vmflow.xyz");
+	strcpy(myhost, "0.otomat.local");
 
     nvs_handle_t handle;
 	if (nvs_open("vmflow", NVS_READONLY, &handle) == ESP_OK) {
@@ -1170,7 +1170,7 @@ void app_main(void) {
             if (nvs_get_str(handle, "domain", NULL, &s_len) == ESP_OK) {
                 nvs_get_str(handle, "domain", my_subdomain, &s_len);
 
-                snprintf(myhost, sizeof(myhost), "%s.vmflow.xyz", my_subdomain);
+                snprintf(myhost, sizeof(myhost), "%s.otomat.local", my_subdomain);
 
                 xEventGroupSetBits(xLedEventGroup, BIT_STATUS_PSSKEY | BIT_STATUS_DOMAIN | BIT_STATUS_TRIGGER);
             }
